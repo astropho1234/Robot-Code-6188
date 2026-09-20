@@ -1,36 +1,38 @@
-package org.firstinspires.ftc.teamcode.drive;
+package org.firstinspires.ftc.teamcode.MainCode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@TeleOp(name="Basic: Omni Linear OpMode", group="Linear OpMode")
+//HARRO ROBBIE THIS IS MAIN TELEOP
 
-public class BasicOmniOpMode_Linear extends LinearOpMode {
+@TeleOp(name="Drive", group="Test")
+
+public class Main_TeleOp extends LinearOpMode {
 
     // Declare the 4 drive motors.
     private ElapsedTime runtime = new ElapsedTime();
 
-    private DcMotor frontLeftDrive = null;
-    private DcMotor rearLeftDrive = null;
-    private DcMotor frontRightDrive = null;
-    private DcMotor rearRightDrive = null;
+    private DcMotor frontLeft = null;
+    private DcMotor rearLeft = null;
+    private DcMotor frontRight = null;
+    private DcMotor rearRight = null;
 
     @Override
     public void runOpMode() {
 
         // Initialize the hardware.
-        frontLeftDrive = hardwareMap.get(DcMotor.class, "front_left_drive");
-        rearLeftDrive = hardwareMap.get(DcMotor.class, "rear_left_drive");
-        frontRightDrive = hardwareMap.get(DcMotor.class, "front_right_drive");
-        rearRightDrive = hardwareMap.get(DcMotor.class, "rear_right_drive");
+        frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
+        rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontright");
+        rearRight = hardwareMap.get(DcMotor.class, "rearright"); //pretty sure the config isn't named right but motor prob broke
 
         // Set motor directions.
-        frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
-        rearLeftDrive.setDirection(DcMotor.Direction.REVERSE);
-        frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
-        rearRightDrive.setDirection(DcMotor.Direction.FORWARD);
+        frontLeft.setDirection(DcMotor.Direction.REVERSE);
+        rearLeft.setDirection(DcMotor.Direction.REVERSE);
+        frontRight.setDirection(DcMotor.Direction.FORWARD);
+        rearRight.setDirection(DcMotor.Direction.FORWARD);
 
         // Wait for the game to start.
         telemetry.addData("Status", "Initialized");
@@ -70,10 +72,10 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             }
 
             // Send power to the motors.
-            frontLeftDrive.setPower(frontLeftPower);
-            frontRightDrive.setPower(frontRightPower);
-            rearLeftDrive.setPower(rearLeftPower);
-            rearRightDrive.setPower(rearRightPower);
+            frontLeft.setPower(frontLeftPower);
+            frontRight.setPower(frontRightPower);
+            rearLeft.setPower(rearLeftPower);
+            rearRight.setPower(rearRightPower);
 
             // Telemetry.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
