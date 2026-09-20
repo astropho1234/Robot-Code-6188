@@ -19,7 +19,7 @@ public class Main_TeleOp extends LinearOpMode {
     private DcMotor frontRight = null;
     private DcMotor rearRight = null;
 
-    private DcMotor Luancher = null;
+    private DcMotor Launcher= null;
 
     @Override
     public void runOpMode() {
@@ -29,7 +29,7 @@ public class Main_TeleOp extends LinearOpMode {
         rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
         frontRight = hardwareMap.get(DcMotor.class, "frontright");
         rearRight = hardwareMap.get(DcMotor.class, "rearright"); //pretty sure the config isn't named right but motor prob broke
-        Luancher = hardwareMap.get(DcMotor.class, "Luancher_flywheel");
+        Launcher = hardwareMap.get(DcMotor.class, "launcher_flywheel");
 
         // Set motor directions.
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
@@ -64,7 +64,7 @@ public class Main_TeleOp extends LinearOpMode {
             //luncher
 
             if (gamepad1.a) {
-                Luancher.setPower(1);
+                Launcher.setPower(1);
 
 
 
