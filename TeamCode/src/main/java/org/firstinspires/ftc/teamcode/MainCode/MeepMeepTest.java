@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 
-@Autonomous(name = "MeepMeep Strafe Test")
+@Autonomous(name = "MeepMeep Strafe Test") //webots uses the file name meepmeeptest this is the main roadrunner tho and this should park "should"
 public class MeepMeepTest extends LinearOpMode {
 
     @Override

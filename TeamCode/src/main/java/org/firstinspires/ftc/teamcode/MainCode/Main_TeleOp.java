@@ -28,7 +28,7 @@ public class Main_TeleOp extends LinearOpMode {
         frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
         rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
         frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        rearRight = hardwareMap.get(DcMotor.class, "rearright"); //pretty sure the config isn't named right but motor prob broke
+        rearRight = hardwareMap.get(DcMotor.class, "rearright"); //broken motor?
         Launcher = hardwareMap.get(DcMotor.class, "launcher_flywheel");
 
         // Set motor directions.

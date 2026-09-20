@@ -13,7 +13,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
 
 import java.util.List;
 
-@TeleOp(name = "AprilTag Rotate Test", group = "Test")
+@TeleOp(name = "AprilTag Rotate Test", group = "Test") //this is strait AI plus like 3 april tag samples so like might run it needs to be tested
 public class AprilTag_test extends LinearOpMode {
 
     private DcMotor frontLeft;
@@ -28,10 +28,10 @@ public class AprilTag_test extends LinearOpMode {
         // Motors
         // -------------------------
 
-        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
-        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
-        backRight = hardwareMap.get(DcMotor.class, "backRight");
+        frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontright");
+        backLeft = hardwareMap.get(DcMotor.class, "rearleft");
+        backRight = hardwareMap.get(DcMotor.class, "rearright");
 
         // Typical mecanum configuration.
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
