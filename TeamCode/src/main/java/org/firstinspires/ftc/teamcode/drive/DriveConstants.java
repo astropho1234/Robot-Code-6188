@@ -10,8 +10,8 @@ public class DriveConstants {
     /*
      * Webots / drive motor constants
      */
-    public static final double TICKS_PER_REV = 560;
-    public static final double MAX_RPM = 300;
+    public static final double TICKS_PER_REV = 28;
+    public static final double MAX_RPM = 6000;
 
     /*
      * Disable built-in motor velocity PID for Webots.
@@ -31,12 +31,12 @@ public class DriveConstants {
     /*
      * Physical constants
      */
-    public static double WHEEL_RADIUS = 1.48; // inches
+    public static double WHEEL_RADIUS = 3.03; // inches
 
     /*
      * Start with 1.0 for the Webots direct-drive setup.
      */
-    public static double GEAR_RATIO = 1.0;
+    public static double GEAR_RATIO = 1.0 / 15;
 
     /*
      * Approximate starting value.
@@ -71,11 +71,11 @@ public class DriveConstants {
      */
     public static RevHubOrientationOnRobot.LogoFacingDirection
             LOGO_FACING_DIR =
-            RevHubOrientationOnRobot.LogoFacingDirection.UP;
+            RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD;
 
     public static RevHubOrientationOnRobot.UsbFacingDirection
             USB_FACING_DIR =
-            RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+            RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
     public static double encoderTicksToInches(double ticks) {
 

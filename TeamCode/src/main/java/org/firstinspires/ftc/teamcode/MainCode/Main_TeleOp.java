@@ -1,9 +1,14 @@
 package org.firstinspires.ftc.teamcode.MainCode;
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
+
+import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
 //HARRO ROBBIE THIS IS MAIN TELEOP
 
@@ -14,28 +19,57 @@ public class Main_TeleOp extends LinearOpMode {
     // Declare the 4 drive motors.
     private ElapsedTime runtime = new ElapsedTime();
 
-    private DcMotor frontLeft = null;
-    private DcMotor rearLeft = null;
-    private DcMotor frontRight = null;
-    private DcMotor rearRight = null;
+    private DcMotorEx leftFront;
+    private DcMotorEx leftRear;
+    private DcMotorEx rightRear;
+    private DcMotorEx rightFront;
 
     private DcMotor Launcher= null;
+
+    private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
+
+    private IMU imu;
 
     @Override
     public void runOpMode() {
 
+        // IMU
+        imu = hardwareMap.get(IMU.class, "imu");
+
+        IMU.Parameters parameters =
+                new IMU.Parameters(
+                        new RevHubOrientationOnRobot(
+                                DriveConstants.LOGO_FACING_DIR,
+                                DriveConstants.USB_FACING_DIR
+                        )
+                );
+
+        imu.initialize(parameters);
+
+
         // Initialize the hardware.
-        frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
-        rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        rearRight = hardwareMap.get(DcMotor.class, "rearright"); //broken motor?
+        // Motors
+        leftFront =
+                hardwareMap.get(DcMotorEx.class, "frontleft");
+
+        leftRear =
+                hardwareMap.get(DcMotorEx.class, "rearleft");
+
+        rightRear =
+                hardwareMap.get(DcMotorEx.class, "rearright");
+
+        rightFront =
+                hardwareMap.get(DcMotorEx.class, "frontright");
+
+
         Launcher = hardwareMap.get(DcMotor.class, "launcher_flywheel");
 
         // Set motor directions.
-        frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        rearLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.FORWARD);
-        rearRight.setDirection(DcMotor.Direction.FORWARD);
+        leftFront.setDirection(DcMotor.Direction.REVERSE);
+        leftRear.setDirection(DcMotor.Direction.REVERSE);
+
+        rightFront.setDirection(DcMotor.Direction.REVERSE);
+        rightRear.setDirection(DcMotor.Direction.REVERSE);
 
         // Wait for the game to start.
         telemetry.addData("Status", "Initialized");
@@ -53,58 +87,52 @@ public class Main_TeleOp extends LinearOpMode {
             double yaw = gamepad1.right_stick_x;
 
             // Calculate power for each wheel.
-            double frontLeftPower = axial + lateral + yaw;
-            double frontRightPower = axial - lateral - yaw;
-            double rearLeftPower = axial - lateral + yaw;
-            double rearRightPower = axial + lateral - yaw;
+            double frontLeftVel = (axial + lateral + yaw) * velConst;
+            double frontRightVel = (axial - lateral - yaw) * velConst;
+            double rearLeftVel = (axial - lateral + yaw) * velConst;
+            double rearRightVel = (axial + lateral - yaw) * velConst;
 
-
-
-
-            //luncher
-
+            //launcher
             if (gamepad1.a) {
-                Launcher.setPower(1);
-
-
+                Launcher.setPower(0.65);
 
             }
 
             // Normalize powers so none exceeds 1.0.
             double max = Math.max(
-                    Math.abs(frontLeftPower),
-                    Math.abs(frontRightPower)
+                    Math.abs(frontLeftVel),
+                    Math.abs(frontRightVel)
             );
 
-            max = Math.max(max, Math.abs(rearLeftPower));
-            max = Math.max(max, Math.abs(rearRightPower));
+            max = Math.max(max, Math.abs(rearLeftVel));
+            max = Math.max(max, Math.abs(rearRightVel));
 
-            if (max > 1.0) {
-                frontLeftPower /= max;
-                frontRightPower /= max;
-                rearLeftPower /= max;
-                rearRightPower /= max;
+            if (max > velConst) {
+                frontLeftVel /= max;
+                frontRightVel /= max;
+                rearLeftVel /= max;
+                rearRightVel /= max;
             }
 
             // Send power to the motors.
-            frontLeft.setPower(frontLeftPower);
-            frontRight.setPower(frontRightPower);
-            rearLeft.setPower(rearLeftPower);
-            rearRight.setPower(rearRightPower);
+            leftFront.setVelocity(frontLeftVel);
+            rightFront.setVelocity(frontRightVel);
+            leftRear.setVelocity(rearLeftVel);
+            rightRear.setVelocity(rearRightVel);
 
             // Telemetry.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData(
                     "Front Left/Right",
                     "%4.2f, %4.2f",
-                    frontLeftPower,
-                    frontRightPower
+                    frontLeftVel,
+                    frontRightVel
             );
             telemetry.addData(
                     "Rear Left/Right",
                     "%4.2f, %4.2f",
-                    rearLeftPower,
-                    rearRightPower
+                    rearLeftVel,
+                    rearRightVel
             );
             telemetry.update();
         }
