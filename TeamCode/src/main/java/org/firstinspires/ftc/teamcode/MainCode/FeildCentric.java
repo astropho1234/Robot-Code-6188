@@ -10,7 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 @TeleOp(name = "FeildCentric", group = "Test")
 
-public class FeildCentric extends LinearOpMode {
+public class FeildCentric extends LinearOpMode { // robbie make sure to change motor directions becuase you dident push your old code rahhhh and now i dont have a clue the motor directions
 
     // Drive motors
     private DcMotor frontLeft = null;
