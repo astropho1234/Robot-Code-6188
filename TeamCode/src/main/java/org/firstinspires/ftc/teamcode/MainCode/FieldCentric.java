@@ -4,28 +4,31 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
 @TeleOp(name = "FeildCentric", group = "Test")
 
-public class FeildCentric extends LinearOpMode { // robbie make sure to change motor directions becuase you dident push your old code rahhhh and now i dont have a clue the motor directions
+public class FieldCentric extends LinearOpMode {
 
     // Drive motors
-    private DcMotor frontLeft = null;
-    private DcMotor rearLeft = null;
-    private DcMotor frontRight = null;
-    private DcMotor rearRight = null;
+    private DcMotorEx frontLeft = null;
+    private DcMotorEx rearLeft = null;
+    private DcMotorEx frontRight = null;
+    private DcMotorEx rearRight = null;
+    private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
 
     @Override
     public void runOpMode() {
 
         // Initialize drive motors
-        frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
-        rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        rearRight = hardwareMap.get(DcMotor.class, "rearright");
+        frontLeft = hardwareMap.get(DcMotorEx.class, "frontleft");
+        rearLeft = hardwareMap.get(DcMotorEx.class, "rearleft");
+        frontRight = hardwareMap.get(DcMotorEx.class, "frontright");
+        rearRight = hardwareMap.get(DcMotorEx.class, "rearright");
 
         // Motor directions
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
@@ -78,33 +81,33 @@ public class FeildCentric extends LinearOpMode { // robbie make sure to change m
             // Compensate for imperfect strafing
             rotX *= 1.1;
 
-            // Calculate mecanum powers
-            double frontLeftPower = rotY + rotX + rx;
-            double frontRightPower = rotY - rotX - rx;
-            double rearLeftPower = rotY - rotX + rx;
-            double rearRightPower = rotY + rotX - rx;
+            // Calculate mecanum velocities
+            double frontLeftVel = rotY + rotX + rx;
+            double frontRightVel = rotY - rotX - rx;
+            double rearLeftVel = rotY - rotX + rx;
+            double rearRightVel = rotY + rotX - rx;
 
-            // Normalize powers
+            // Normalize velocities
             double max = Math.max(
-                    Math.abs(frontLeftPower),
-                    Math.abs(frontRightPower)
+                    Math.abs(frontLeftVel),
+                    Math.abs(frontRightVel)
             );
 
-            max = Math.max(max, Math.abs(rearLeftPower));
-            max = Math.max(max, Math.abs(rearRightPower));
+            max = Math.max(max, Math.abs(rearLeftVel));
+            max = Math.max(max, Math.abs(rearRightVel));
 
-            if (max > 1.0) {
-                frontLeftPower /= max;
-                frontRightPower /= max;
-                rearLeftPower /= max;
-                rearRightPower /= max;
+            if (max > velConst) {
+                frontLeftVel /= max;
+                frontRightVel /= max;
+                rearLeftVel /= max;
+                rearRightVel /= max;
             }
 
-            // Send power to motors
-            frontLeft.setPower(frontLeftPower);
-            frontRight.setPower(frontRightPower);
-            rearLeft.setPower(rearLeftPower);
-            rearRight.setPower(rearRightPower);
+            // Send velocity to motors
+            frontLeft.setVelocity(frontLeftVel);
+            frontRight.setVelocity(frontRightVel);
+            rearLeft.setVelocity(rearLeftVel);
+            rearRight.setVelocity(rearRightVel);
 
             // Telemetry
             telemetry.addData(
@@ -116,15 +119,15 @@ public class FeildCentric extends LinearOpMode { // robbie make sure to change m
             telemetry.addData(
                     "Front Left/Right",
                     "%.2f, %.2f",
-                    frontLeftPower,
-                    frontRightPower
+                    frontLeftVel,
+                    frontRightVel
             );
 
             telemetry.addData(
                     "Rear Left/Right",
                     "%.2f, %.2f",
-                    rearLeftPower,
-                    rearRightPower
+                    rearLeftVel,
+                    rearRightVel
             );
 
             telemetry.update();
