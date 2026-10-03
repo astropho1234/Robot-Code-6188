@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-@TeleOp(name="Drive + Turret", group="Test")
+@TeleOp(name="Drive_Turret", group="Test")
 public class teleop_with_turrent extends LinearOpMode {
 
     // motors

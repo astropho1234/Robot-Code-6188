@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
-@TeleOp(name="Drive", group="Test")
+@TeleOp(name="MainDriveFinal", group="Test")
 public class teleop_no_turrent extends LinearOpMode {
 
     // variables
