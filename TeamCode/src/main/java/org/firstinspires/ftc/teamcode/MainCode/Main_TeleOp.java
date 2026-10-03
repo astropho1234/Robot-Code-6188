@@ -82,8 +82,8 @@ public class Main_TeleOp extends LinearOpMode {
         while (opModeIsActive()) {
 
             // Joystick controls.
-            double axial = -gamepad1.left_stick_y;
-            double lateral = gamepad1.left_stick_x;
+            double axial = gamepad1.left_stick_y;
+            double lateral = -gamepad1.left_stick_x;
             double yaw = gamepad1.right_stick_x;
 
             // Calculate power for each wheel.
