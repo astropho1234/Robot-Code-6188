@@ -11,7 +11,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 @TeleOp(name="Drive", group="Test")
-public class teleop extends LinearOpMode {
+public class teleop_no_turrent extends LinearOpMode {
 
     // variables
 
@@ -22,6 +22,8 @@ public class teleop extends LinearOpMode {
     private DcMotorEx rightFront;
 
     private YawPitchRollAngles robotOrientation;
+
+    private static final double MAX_TPS = 2400.0;
 
 
 
@@ -64,6 +66,13 @@ public class teleop extends LinearOpMode {
         rightFront =
                 hardwareMap.get(DcMotorEx.class, "frontright");
 
+        //encoder
+
+        leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftRear.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightRear.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
 
 
         // Set motor directions.
@@ -78,6 +87,7 @@ public class teleop extends LinearOpMode {
         telemetry.update();
 
         waitForStart();
+        imu.resetYaw();
 
         //setup gamepad
         while (opModeIsActive()) {
@@ -110,10 +120,10 @@ public class teleop extends LinearOpMode {
             double frontRightPower = (rotY - rotX - rx) / denominator;
             double backRightPower = (rotY + rotX - rx) / denominator;
 
-            leftFront.setPower(frontLeftPower);
-            leftRear.setPower(backLeftPower);
-            rightFront.setPower(frontRightPower);
-            rightRear.setPower(backRightPower);
+            leftFront.setVelocity(frontLeftPower * MAX_TPS);
+            leftRear.setVelocity(backLeftPower * MAX_TPS);
+            rightFront.setVelocity(frontRightPower * MAX_TPS);
+            rightRear.setVelocity(backRightPower * MAX_TPS);
 
 
 
