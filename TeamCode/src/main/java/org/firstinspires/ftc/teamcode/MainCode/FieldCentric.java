@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
-@TeleOp(name = "FeildCentric", group = "Test")
+@TeleOp(name = "FieldCentric", group = "Test")
 
 public class FieldCentric extends LinearOpMode {
 
@@ -33,8 +33,8 @@ public class FieldCentric extends LinearOpMode {
         // Motor directions
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
         rearLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.FORWARD);
-        rearRight.setDirection(DcMotor.Direction.FORWARD);
+        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        rearRight.setDirection(DcMotor.Direction.REVERSE);
 
         // Initialize IMU
         IMU imu = hardwareMap.get(IMU.class, "imu");
@@ -82,6 +82,9 @@ public class FieldCentric extends LinearOpMode {
             rotX *= 1.1;
 
             // Calculate mecanum velocities
+
+            // here is the previous code, it seems to be doing something similar to the correct version
+            /*
             double frontLeftVel = rotY + rotX + rx;
             double frontRightVel = rotY - rotX - rx;
             double rearLeftVel = rotY - rotX + rx;
@@ -102,6 +105,13 @@ public class FieldCentric extends LinearOpMode {
                 rearLeftVel /= max;
                 rearRightVel /= max;
             }
+             */
+            // here is the new code that should do this properly
+            double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+            double frontLeftVel = velConst * (rotY + rotX + rx) / denominator;
+            double rearLeftVel = velConst * (rotY - rotX + rx) / denominator;
+            double frontRightVel = velConst * (rotY - rotX - rx) / denominator;
+            double rearRightVel = velConst * (rotY + rotX - rx) / denominator;
 
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
