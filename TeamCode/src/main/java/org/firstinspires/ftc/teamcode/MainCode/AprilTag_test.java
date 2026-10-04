@@ -18,8 +18,8 @@ public class AprilTag_test extends LinearOpMode {
 
     private DcMotor frontLeft;
     private DcMotor frontRight;
-    private DcMotor backLeft;
-    private DcMotor backRight;
+    private DcMotor rearLeft;
+    private DcMotor rearRight;
 
     @Override
     public void runOpMode() {
@@ -30,12 +30,14 @@ public class AprilTag_test extends LinearOpMode {
 
         frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
         frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        backLeft = hardwareMap.get(DcMotor.class, "rearleft");
-        backRight = hardwareMap.get(DcMotor.class, "rearright");
+        rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
+        rearRight = hardwareMap.get(DcMotor.class, "rearright");
 
         // Typical mecanum configuration.
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontLeft.setDirection(DcMotor.Direction.REVERSE);
+        rearLeft.setDirection(DcMotor.Direction.REVERSE);
+        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        rearRight.setDirection(DcMotor.Direction.REVERSE);
 
         // -------------------------
         // AprilTag
@@ -72,7 +74,7 @@ public class AprilTag_test extends LinearOpMode {
 
                     foundTag = true;
 
-                    int tagId = tag.id;
+                    int tagId = tag.id; // might need to filter by id because of multiple april tags on the hive
                     double bearing = tag.ftcPose.bearing;
 
                     telemetry.addData("Tag ID", tagId);
@@ -144,17 +146,17 @@ public class AprilTag_test extends LinearOpMode {
 
         // Rotate in place.
         frontLeft.setPower(power);
-        backLeft.setPower(power);
+        rearLeft.setPower(power);
 
         frontRight.setPower(-power);
-        backRight.setPower(-power);
+        rearRight.setPower(-power);
     }
 
     private void stopRobot() {
 
         frontLeft.setPower(0);
         frontRight.setPower(0);
-        backLeft.setPower(0);
-        backRight.setPower(0);
+        rearLeft.setPower(0);
+        rearRight.setPower(0);
     }
 }
