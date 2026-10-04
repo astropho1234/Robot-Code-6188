@@ -19,6 +19,8 @@ public class FieldCentric extends LinearOpMode {
     private DcMotorEx rearLeft = null;
     private DcMotorEx frontRight = null;
     private DcMotorEx rearRight = null;
+
+    double lowPower;
     private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
 
     @Override
@@ -46,6 +48,8 @@ public class FieldCentric extends LinearOpMode {
         RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
+        lowPower = 1;
+
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
                         logoDirection,
@@ -57,18 +61,19 @@ public class FieldCentric extends LinearOpMode {
         telemetry.update();
 
         waitForStart();
+        imu.resetYaw();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
 
             // Joystick controls
-            double y = -gamepad1.left_stick_y;
-            double x = gamepad1.left_stick_x;
-            double rx = gamepad1.right_stick_x;
+            double y = gamepad1.left_stick_y * lowPower;
+            double x = gamepad1.left_stick_x * lowPower;
+            double rx = gamepad1.right_stick_x * 3 * lowPower;
 
             // Get robot heading
-            double botHeading = imu.getRobotYawPitchRollAngles()
+            double botHeading = -imu.getRobotYawPitchRollAngles()
                     .getYaw(AngleUnit.RADIANS);
 
             // Convert robot-centric controls to field-centric
@@ -118,6 +123,17 @@ public class FieldCentric extends LinearOpMode {
             frontRight.setVelocity(frontRightVel);
             rearLeft.setVelocity(rearLeftVel);
             rearRight.setVelocity(rearRightVel);
+
+            if (gamepad1.rightBumperWasPressed()){
+                if (lowPower == 0.5) {
+                    lowPower = 1;
+                }
+                lowPower = 0.5;
+            }
+
+            if (gamepad1.startWasPressed()){
+                imu.resetYaw();
+            }
 
             // Telemetry
             telemetry.addData(
