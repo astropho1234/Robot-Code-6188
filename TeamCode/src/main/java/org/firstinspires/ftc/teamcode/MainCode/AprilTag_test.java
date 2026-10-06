@@ -11,15 +11,22 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @TeleOp(name = "AprilTag Rotate Test", group = "Test") //this is strait AI plus like 3 april tag samples so like might run it needs to be tested
-public class AprilTag_test extends LinearOpMode {
+public class AprilTag_test extends LinearOpMode{
 
     private DcMotor frontLeft;
     private DcMotor frontRight;
-    private DcMotor backLeft;
-    private DcMotor backRight;
+    private DcMotor rearLeft;
+    private DcMotor rearRight;
+
+    private AprilTagProcessor aprilTagProcessor; // the apriltag
+
+    private VisionPortal visionPortal; // can use visual processors
+
+    private List<AprilTagDetection> detectedTags = new ArrayList<>(); // for apriltag detection
 
     @Override
     public void runOpMode() {
@@ -30,12 +37,14 @@ public class AprilTag_test extends LinearOpMode {
 
         frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
         frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        backLeft = hardwareMap.get(DcMotor.class, "rearleft");
-        backRight = hardwareMap.get(DcMotor.class, "rearright");
+        rearLeft = hardwareMap.get(DcMotor.class, "rearleft");
+        rearRight = hardwareMap.get(DcMotor.class, "rearright");
 
         // Typical mecanum configuration.
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontLeft.setDirection(DcMotor.Direction.REVERSE);
+        rearLeft.setDirection(DcMotor.Direction.REVERSE);
+        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        rearRight.setDirection(DcMotor.Direction.REVERSE);
 
         // -------------------------
         // AprilTag
@@ -48,6 +57,7 @@ public class AprilTag_test extends LinearOpMode {
                 hardwareMap.get(WebcamName.class, "Webcam 1"),
                 aprilTagProcessor
         );
+
 
         telemetry.addLine("AprilTag initialized");
         telemetry.addLine("Waiting for start...");
@@ -72,7 +82,7 @@ public class AprilTag_test extends LinearOpMode {
 
                     foundTag = true;
 
-                    int tagId = tag.id;
+                    int tagId = tag.id; // might need to filter by id because of multiple april tags on the hive
                     double bearing = tag.ftcPose.bearing;
 
                     telemetry.addData("Tag ID", tagId);
@@ -87,41 +97,43 @@ public class AprilTag_test extends LinearOpMode {
                     // Rotate toward tag
                     // -------------------------
 
-                    double tolerance = 2.0;
+                    if (tagId == 38 || tagId == 42) {
+                        double tolerance = 2.0;
 
-                    if (Math.abs(bearing) <= tolerance) {
+                        if (Math.abs(bearing) <= tolerance) {
 
-                        stopRobot();
+                            stopRobot();
 
-                        telemetry.addLine("TAG CENTERED");
+                            telemetry.addLine("TAG CENTERED");
 
-                    } else {
+                        } else {
 
-                        // Proportional control
-                        double turnPower = bearing * 0.015;
+                            // Proportional control
+                            double turnPower = bearing * 0.015;
 
-                        // Limit speed
-                        turnPower = Math.max(
-                                -0.5,
-                                Math.min(0.5, turnPower)
-                        );
+                            // Limit speed
+                            turnPower = Math.max(
+                                    -0.5,
+                                    Math.min(0.5, turnPower)
+                            );
 
-                        // Prevent extremely small power
-                        // from failing to move the robot.
-                        if (Math.abs(turnPower) < 0.15) {
-                            turnPower = Math.copySign(
-                                    0.15,
+                            // Prevent extremely small power
+                            // from failing to move the robot.
+                            if (Math.abs(turnPower) < 0.15) {
+                                turnPower = Math.copySign(
+                                        0.15,
+                                        turnPower
+                                );
+                            }
+
+                            rotate(turnPower);
+
+                            telemetry.addData(
+                                    "Turn Power",
+                                    "%.2f",
                                     turnPower
                             );
                         }
-
-                        rotate(turnPower);
-
-                        telemetry.addData(
-                                "Turn Power",
-                                "%.2f",
-                                turnPower
-                        );
                     }
 
                     break;
@@ -144,17 +156,17 @@ public class AprilTag_test extends LinearOpMode {
 
         // Rotate in place.
         frontLeft.setPower(power);
-        backLeft.setPower(power);
+        rearLeft.setPower(power);
 
         frontRight.setPower(-power);
-        backRight.setPower(-power);
+        rearRight.setPower(-power);
     }
 
     private void stopRobot() {
 
         frontLeft.setPower(0);
         frontRight.setPower(0);
-        backLeft.setPower(0);
-        backRight.setPower(0);
+        rearLeft.setPower(0);
+        rearRight.setPower(0);
     }
 }

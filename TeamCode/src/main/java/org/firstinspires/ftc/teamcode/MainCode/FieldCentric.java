@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
-@TeleOp(name = "FeildCentric", group = "Test")
+@TeleOp(name = "FieldCentric", group = "Test")
 
 public class FieldCentric extends LinearOpMode {
 
@@ -19,6 +19,8 @@ public class FieldCentric extends LinearOpMode {
     private DcMotorEx rearLeft = null;
     private DcMotorEx frontRight = null;
     private DcMotorEx rearRight = null;
+
+    double lowPower;
     private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
 
     @Override
@@ -33,8 +35,8 @@ public class FieldCentric extends LinearOpMode {
         // Motor directions
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
         rearLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.FORWARD);
-        rearRight.setDirection(DcMotor.Direction.FORWARD);
+        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        rearRight.setDirection(DcMotor.Direction.REVERSE);
 
         // Initialize IMU
         IMU imu = hardwareMap.get(IMU.class, "imu");
@@ -45,6 +47,8 @@ public class FieldCentric extends LinearOpMode {
 
         RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.UP;
+
+        lowPower = 1;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -57,18 +61,19 @@ public class FieldCentric extends LinearOpMode {
         telemetry.update();
 
         waitForStart();
+        imu.resetYaw();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
 
             // Joystick controls
-            double y = -gamepad1.left_stick_y;
-            double x = gamepad1.left_stick_x;
-            double rx = gamepad1.right_stick_x;
+            double y = gamepad1.left_stick_y * lowPower;
+            double x = gamepad1.left_stick_x * lowPower;
+            double rx = gamepad1.right_stick_x * 3 * lowPower;
 
             // Get robot heading
-            double botHeading = imu.getRobotYawPitchRollAngles()
+            double botHeading = -imu.getRobotYawPitchRollAngles()
                     .getYaw(AngleUnit.RADIANS);
 
             // Convert robot-centric controls to field-centric
@@ -82,6 +87,9 @@ public class FieldCentric extends LinearOpMode {
             rotX *= 1.1;
 
             // Calculate mecanum velocities
+
+            // here is the previous code, it seems to be doing something similar to the correct version
+            /*
             double frontLeftVel = rotY + rotX + rx;
             double frontRightVel = rotY - rotX - rx;
             double rearLeftVel = rotY - rotX + rx;
@@ -102,12 +110,30 @@ public class FieldCentric extends LinearOpMode {
                 rearLeftVel /= max;
                 rearRightVel /= max;
             }
+             */
+            // here is the new code that should do this properly
+            double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+            double frontLeftVel = velConst * (rotY + rotX + rx) / denominator;
+            double rearLeftVel = velConst * (rotY - rotX + rx) / denominator;
+            double frontRightVel = velConst * (rotY - rotX - rx) / denominator;
+            double rearRightVel = velConst * (rotY + rotX - rx) / denominator;
 
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
             frontRight.setVelocity(frontRightVel);
             rearLeft.setVelocity(rearLeftVel);
             rearRight.setVelocity(rearRightVel);
+
+            if (gamepad1.rightBumperWasPressed()){
+                if (lowPower == 0.5) {
+                    lowPower = 1;
+                }
+                lowPower = 0.5;
+            }
+
+            if (gamepad1.startWasPressed()){
+                imu.resetYaw();
+            }
 
             // Telemetry
             telemetry.addData(
