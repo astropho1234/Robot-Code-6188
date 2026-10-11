@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -19,9 +20,14 @@ public class FieldCentric extends LinearOpMode {
     private DcMotorEx rearLeft = null;
     private DcMotorEx frontRight = null;
     private DcMotorEx rearRight = null;
+    private DcMotorEx outerIntake = null;
+    private DcMotorEx innerIntake = null;
+    private DcMotorEx TurretSpin = null;
+    private DcMotorEx TurretShoot = null;
 
     double lowPower;
     private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
+    double intakeVel;
 
     @Override
     public void runOpMode() {
@@ -31,6 +37,14 @@ public class FieldCentric extends LinearOpMode {
         rearLeft = hardwareMap.get(DcMotorEx.class, "rearleft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontright");
         rearRight = hardwareMap.get(DcMotorEx.class, "rearright");
+
+        // Intake motors
+        outerIntake = hardwareMap.get(DcMotorEx.class, "intake1");
+        innerIntake = hardwareMap.get(DcMotorEx.class, "intake2");
+
+        // turret motors
+        TurretSpin = hardwareMap.get(DcMotorEx.class, "turretspin");
+        TurretShoot = hardwareMap.get(DcMotorEx.class, "turretshoot");
 
         // Motor directions
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
@@ -49,6 +63,7 @@ public class FieldCentric extends LinearOpMode {
                 RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
         lowPower = 1;
+        intakeVel = 0.0;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -72,6 +87,15 @@ public class FieldCentric extends LinearOpMode {
             double x = gamepad1.left_stick_x * lowPower;
             double rx = gamepad1.right_stick_x * 3 * lowPower;
 
+            // Intake
+            if (gamepad1.dpad_right) {
+                intakeVel = 0;
+            } else if (gamepad1.dpad_down) {
+                intakeVel += 0.1;
+            } else if (gamepad1.dpad_up) {
+                intakeVel -= 0.1;
+            }
+
             // Get robot heading
             double botHeading = -imu.getRobotYawPitchRollAngles()
                     .getYaw(AngleUnit.RADIANS);
@@ -87,36 +111,15 @@ public class FieldCentric extends LinearOpMode {
             rotX *= 1.1;
 
             // Calculate mecanum velocities
-
-            // here is the previous code, it seems to be doing something similar to the correct version
-            /*
-            double frontLeftVel = rotY + rotX + rx;
-            double frontRightVel = rotY - rotX - rx;
-            double rearLeftVel = rotY - rotX + rx;
-            double rearRightVel = rotY + rotX - rx;
-
-            // Normalize velocities
-            double max = Math.max(
-                    Math.abs(frontLeftVel),
-                    Math.abs(frontRightVel)
-            );
-
-            max = Math.max(max, Math.abs(rearLeftVel));
-            max = Math.max(max, Math.abs(rearRightVel));
-
-            if (max > velConst) {
-                frontLeftVel /= max;
-                frontRightVel /= max;
-                rearLeftVel /= max;
-                rearRightVel /= max;
-            }
-             */
-            // here is the new code that should do this properly
             double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
             double frontLeftVel = velConst * (rotY + rotX + rx) / denominator;
             double rearLeftVel = velConst * (rotY - rotX + rx) / denominator;
             double frontRightVel = velConst * (rotY - rotX - rx) / denominator;
             double rearRightVel = velConst * (rotY + rotX - rx) / denominator;
+
+            // Intake velocity
+            double outerIntakeVel = velConst * intakeVel;
+            double innerIntakeVel = velConst * intakeVel;
 
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
@@ -124,11 +127,15 @@ public class FieldCentric extends LinearOpMode {
             rearLeft.setVelocity(rearLeftVel);
             rearRight.setVelocity(rearRightVel);
 
+            outerIntake.setVelocity(outerIntakeVel);
+            innerIntake.setVelocity(innerIntakeVel);
+
             if (gamepad1.rightBumperWasPressed()){
-                if (lowPower == 0.5) {
+                if (lowPower == 1) {
+                    lowPower = 0.5;
+                } else {
                     lowPower = 1;
                 }
-                lowPower = 0.5;
             }
 
             if (gamepad1.startWasPressed()){
@@ -155,6 +162,8 @@ public class FieldCentric extends LinearOpMode {
                     rearLeftVel,
                     rearRightVel
             );
+
+            telemetry.addData("intake vel",intakeVel);
 
             telemetry.update();
         }

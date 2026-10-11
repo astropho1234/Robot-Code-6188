@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
@@ -68,81 +69,88 @@ public class AprilTag_test extends LinearOpMode{
         while (opModeIsActive()) {
 
             List<AprilTagDetection> detections =
-                    aprilTagProcessor.getDetections();
+                    aprilTagProcessor.getFreshDetections();
 
-            boolean foundTag = false;
 
-            for (AprilTagDetection detection : detections) {
+            if (detections != null) {
+                boolean foundTag = false;
 
-                // SDK 12+
-                if (detection instanceof AprilTagSingleDetection) {
+                for (AprilTagDetection detection : detections) {
 
-                    AprilTagSingleDetection tag =
-                            (AprilTagSingleDetection) detection;
+                    // SDK 12+
+                    if (detection instanceof AprilTagClusterDetection) {
 
-                    foundTag = true;
 
-                    int tagId = tag.id; // might need to filter by id because of multiple april tags on the hive
-                    double bearing = tag.ftcPose.bearing;
+                        AprilTagClusterDetection tag =
+                                (AprilTagClusterDetection) detection;
 
-                    telemetry.addData("Tag ID", tagId);
-                    telemetry.addData("Bearing", "%.1f°", bearing);
-                    telemetry.addData(
-                            "Range",
-                            "%.1f in",
-                            tag.ftcPose.range
-                    );
+                        foundTag = true;
 
-                    // -------------------------
-                    // Rotate toward tag
-                    // -------------------------
+                        String ClusterName = tag.metadata.name;
+                        double roll = tag.ftcPose.roll;
+                        double bearing = tag.ftcPose.bearing;
 
-                    if (tagId == 38 || tagId == 42) {
-                        double tolerance = 2.0;
+                        telemetry.addData("Cluster Name", ClusterName);
+                        telemetry.addData("Percent Cluster Found", tag.percentClusterFound);
+                        telemetry.addData("Bearing", "%.1f°", bearing);
+                        telemetry.addData("Range", "%.1f in", tag.ftcPose.range);
 
-                        if (Math.abs(bearing) <= tolerance) {
+                        telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", tag.ftcPose.x, tag.ftcPose.y, tag.ftcPose.z));
+                        telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", tag.ftcPose.pitch, tag.ftcPose.roll, tag.ftcPose.yaw));
 
-                            stopRobot();
 
-                            telemetry.addLine("TAG CENTERED");
+                        // -------------------------
+                        // Rotate toward tag
+                        // -------------------------
 
-                        } else {
+                        if (ClusterName.charAt(0) == 'R' && Math.abs(roll) < 90) {
+                            double tolerance = 2.0;
 
-                            // Proportional control
-                            double turnPower = bearing * 0.015;
+                            if (Math.abs(bearing) <= tolerance) {
 
-                            // Limit speed
-                            turnPower = Math.max(
-                                    -0.5,
-                                    Math.min(0.5, turnPower)
-                            );
+                                stopRobot();
 
-                            // Prevent extremely small power
-                            // from failing to move the robot.
-                            if (Math.abs(turnPower) < 0.15) {
-                                turnPower = Math.copySign(
-                                        0.15,
+
+                                telemetry.addLine("TAG CENTERED");
+
+                            } else {
+
+                                // Proportional control
+                                double turnPower = bearing * 0.015;
+
+                                // Limit speed
+                                turnPower = Math.max(
+                                        -0.5,
+                                        Math.min(0.5, turnPower)
+                                );
+
+                                // Prevent extremely small power
+                                // from failing to move the robot.
+                                if (Math.abs(turnPower) < 0.15) {
+                                    turnPower = Math.copySign(
+                                            0.15,
+                                            turnPower
+                                    );
+                                }
+
+                                rotate(turnPower);
+
+                                telemetry.addData(
+                                        "Turn Power",
+                                        "%.2f",
                                         turnPower
                                 );
                             }
-
-                            rotate(turnPower);
-
-                            telemetry.addData(
-                                    "Turn Power",
-                                    "%.2f",
-                                    turnPower
-                            );
                         }
+
+                        break;
                     }
-
-                    break;
                 }
-            }
 
-            if (!foundTag) {
-                stopRobot();
-                telemetry.addLine("No AprilTag detected");
+                if (!foundTag) {
+                    stopRobot();
+                    telemetry.addLine("No AprilTag detected");
+                }
             }
 
             telemetry.update();
