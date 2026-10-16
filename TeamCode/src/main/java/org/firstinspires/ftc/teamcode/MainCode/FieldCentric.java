@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -29,7 +30,8 @@ public class FieldCentric extends LinearOpMode {
 
     private double lowPower;
     private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
-    private double intakeVel;
+    private double outerIntakeVel;
+    private double innerIntakeVel;
 
     @Override
     public void runOpMode() {
@@ -44,16 +46,16 @@ public class FieldCentric extends LinearOpMode {
         outerIntake = hardwareMap.get(DcMotorEx.class, "intake1");
         innerIntake = hardwareMap.get(DcMotorEx.class, "intake2");
 
-        // turret motors
+        // Turret motors
         turretSpin = hardwareMap.get(DcMotorEx.class, "turretspin");
         turretShoot = hardwareMap.get(DcMotorEx.class, "turretshoot");
 
-        // odometry
-        odometry = hardwareMap.get(SparkFunOTOS.class, "odometry");
+        // Odometry
+        // odometry = hardwareMap.get(SparkFunOTOS.class, "odometry");
 
         // Motor directions
-        frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        rearLeft.setDirection(DcMotor.Direction.REVERSE);
+        frontLeft.setDirection(DcMotor.Direction.FORWARD);
+        rearLeft.setDirection(DcMotor.Direction.FORWARD);
         frontRight.setDirection(DcMotor.Direction.REVERSE);
         rearRight.setDirection(DcMotor.Direction.REVERSE);
 
@@ -66,22 +68,23 @@ public class FieldCentric extends LinearOpMode {
         // Initialize IMU and odometry
         IMU imu = hardwareMap.get(IMU.class, "imu");
 
-        odometry.setLinearUnit(DistanceUnit.METER);
-        odometry.setAngularUnit(AngleUnit.DEGREES);
+        // odometry.setLinearUnit(DistanceUnit.METER);
+        // odometry.setAngularUnit(AngleUnit.DEGREES);
         // all of these below are temp values that need to be changed
-        odometry.setOffset(new SparkFunOTOS.Pose2D(.17,.1885,0));
-        odometry.setLinearScalar(1.0);
-        odometry.setAngularScalar(1.0);
+        // odometry.setOffset(new SparkFunOTOS.Pose2D(.17,.1885,0));
+        // odometry.setLinearScalar(1.0);
+        // odometry.setAngularScalar(1.0);
 
         // Change these if your Control Hub is mounted differently
         RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD;
+                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
 
         RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
         lowPower = 1;
-        intakeVel = 0.0;
+        outerIntakeVel = 0.0;
+        innerIntakeVel = 0.0;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -102,16 +105,20 @@ public class FieldCentric extends LinearOpMode {
 
             // Joystick controls
             double y = gamepad1.left_stick_y * lowPower;
-            double x = gamepad1.left_stick_x * lowPower;
-            double rx = gamepad1.right_stick_x * 3 * lowPower;
+            double x = -gamepad1.left_stick_x * lowPower;
+            double rx = -gamepad1.right_stick_x * 3 * lowPower;
 
             // Intake
-            if (gamepad1.dpad_right) {
-                intakeVel = 0;
-            } else if (gamepad1.dpad_down) {
-                intakeVel += 0.1;
-            } else if (gamepad1.dpad_up) {
-                intakeVel -= 0.1;
+            if (gamepad1.dpadRightWasPressed()) {
+                outerIntakeVel += velConst * 0.1;
+            } else if (gamepad1.dpadLeftWasPressed()) {
+                outerIntakeVel -= velConst * 0.1;
+            }
+
+            if (gamepad1.dpadDownWasPressed()) {
+                innerIntakeVel += velConst * 0.1;
+            } else if (gamepad1.dpadUpWasPressed()) {
+                innerIntakeVel -= velConst * 0.1;
             }
 
             // launcher
@@ -124,7 +131,7 @@ public class FieldCentric extends LinearOpMode {
             from the center of the field
 
             assume position starts from the left corner (offset by 17 cm forwards 18.85 sideways)
-             */
+
             SparkFunOTOS.Pose2D odometryPos = odometry.getPosition();
             double xDistToTarget = 1.2614 - odometryPos.x;
             double yDistToTarget = 1.50625 - odometryPos.y;
@@ -140,10 +147,12 @@ public class FieldCentric extends LinearOpMode {
                     (Math.cos(launchAngle) * Math.cos(launchAngle) * (xDistToTarget * Math.tan(launchAngle) - yDistToTarget)));
             double launcherVel = activeLauncher * launchSpeed * DriveConstants.TICKS_PER_REV / (.045 * 2 * Math.PI); // .045 is radius of wheel
 
+             */
+
 
 
             // Get robot heading
-            double botHeading = -imu.getRobotYawPitchRollAngles()
+            double botHeading = imu.getRobotYawPitchRollAngles()
                     .getYaw(AngleUnit.RADIANS);
 
             // Convert robot-centric controls to field-centric
@@ -163,10 +172,6 @@ public class FieldCentric extends LinearOpMode {
             double frontRightVel = velConst * (rotY - rotX - rx) / denominator;
             double rearRightVel = velConst * (rotY + rotX - rx) / denominator;
 
-            // Intake velocity
-            double outerIntakeVel = velConst * intakeVel;
-            double innerIntakeVel = velConst * intakeVel;
-
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
             frontRight.setVelocity(frontRightVel);
@@ -176,12 +181,12 @@ public class FieldCentric extends LinearOpMode {
             outerIntake.setVelocity(outerIntakeVel);
             innerIntake.setVelocity(innerIntakeVel);
 
-            turretSpin.setTargetPosition(turretTicksToRotate);
+            // turretSpin.setTargetPosition(turretTicksToRotate);
             turretSpin.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             // might want pid for this later instead
             turretSpin.setVelocity(0.25);
 
-            turretShoot.setVelocity(launcherVel);
+            // turretShoot.setVelocity(launcherVel);
 
             if (gamepad1.rightBumperWasPressed()){
                 if (lowPower == 1) {
@@ -216,7 +221,10 @@ public class FieldCentric extends LinearOpMode {
                     rearRightVel
             );
 
-            telemetry.addData("intake vel",intakeVel);
+            telemetry.addData("Inner Intake vel: ",innerIntakeVel);
+            telemetry.addData("Outer Intake vel: ",outerIntakeVel);
+            telemetry.addData("turret spinning: ",activeLauncher);
+            // ,telemetry.addData("turret vel: ",launcherVel);
 
             telemetry.update();
         }
