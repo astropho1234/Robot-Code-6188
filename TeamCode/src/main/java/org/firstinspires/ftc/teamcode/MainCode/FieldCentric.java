@@ -51,29 +51,31 @@ public class FieldCentric extends LinearOpMode {
         turretShoot = hardwareMap.get(DcMotorEx.class, "turretshoot");
 
         // Odometry
-        // odometry = hardwareMap.get(SparkFunOTOS.class, "odometry");
+        odometry = hardwareMap.get(SparkFunOTOS.class, "odometry");
 
         // Motor directions
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
         rearLeft.setDirection(DcMotor.Direction.FORWARD);
         frontRight.setDirection(DcMotor.Direction.REVERSE);
         rearRight.setDirection(DcMotor.Direction.REVERSE);
+        turretSpin.setDirection(DcMotor.Direction.REVERSE);
 
         // motor modes
         // assumes initial position is straight forwards
         turretSpin.setTargetPosition(0);
         turretSpin.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        turretSpin.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         turretSpin.setVelocity(0);
 
         // Initialize IMU and odometry
         IMU imu = hardwareMap.get(IMU.class, "imu");
 
-        // odometry.setLinearUnit(DistanceUnit.METER);
-        // odometry.setAngularUnit(AngleUnit.DEGREES);
-        // all of these below are temp values that need to be changed
-        // odometry.setOffset(new SparkFunOTOS.Pose2D(.17,.1885,0));
-        // odometry.setLinearScalar(1.0);
-        // odometry.setAngularScalar(1.0);
+         odometry.setLinearUnit(DistanceUnit.METER);
+         odometry.setAngularUnit(AngleUnit.DEGREES);
+         // all of these below are temp values that need to be changed
+         odometry.setOffset(new SparkFunOTOS.Pose2D(0,0,0));
+         odometry.setLinearScalar(1.463);
+         odometry.setAngularScalar(1.0);
 
         // Change these if your Control Hub is mounted differently
         RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
@@ -131,23 +133,23 @@ public class FieldCentric extends LinearOpMode {
             from the center of the field
 
             assume position starts from the left corner (offset by 17 cm forwards 18.85 sideways)
+             */
 
             SparkFunOTOS.Pose2D odometryPos = odometry.getPosition();
             double xDistToTarget = 1.2614 - odometryPos.x;
             double yDistToTarget = 1.50625 - odometryPos.y;
 
             // specifically amount to rotate, takes into account robot rotation
-            double angleToTarget = Math.atan2(yDistToTarget, xDistToTarget) - odometryPos.h; // in radians
+            double angleToTarget = Math.atan2(xDistToTarget, yDistToTarget) - Math.toRadians(odometryPos.h); // in radians
             // multiply gear ratio in with angleToTarget
-            int turretTicksToRotate = (int) ((angleToTarget) * 28 / Math.PI);
+            // Convert angle from -pi to pi to encoder ticks
+            int turretTicksToRotate = (int) ((angleToTarget * 3.61 * 3.61 * 3.61) * 28 / Math.PI);
 
             double launchAngle = Math.toRadians(45);
             // speed is only the speed of the ball, not the launcher vel
-            double launchSpeed = Math.sqrt((4.7 * xDistToTarget * xDistToTarget) /
-                    (Math.cos(launchAngle) * Math.cos(launchAngle) * (xDistToTarget * Math.tan(launchAngle) - yDistToTarget)));
+            double launchSpeed = Math.sqrt(Math.abs((4.7 * xDistToTarget * xDistToTarget) /
+                    (Math.cos(launchAngle) * Math.cos(launchAngle) * (xDistToTarget * Math.tan(launchAngle) - yDistToTarget))));
             double launcherVel = activeLauncher * launchSpeed * DriveConstants.TICKS_PER_REV / (.045 * 2 * Math.PI); // .045 is radius of wheel
-
-             */
 
 
 
@@ -181,12 +183,12 @@ public class FieldCentric extends LinearOpMode {
             outerIntake.setVelocity(outerIntakeVel);
             innerIntake.setVelocity(innerIntakeVel);
 
-            // turretSpin.setTargetPosition(turretTicksToRotate);
+            turretSpin.setTargetPosition(turretTicksToRotate);
             turretSpin.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             // might want pid for this later instead
-            turretSpin.setVelocity(0.25);
+            turretSpin.setVelocity(0.25 * velConst);
 
-            // turretShoot.setVelocity(launcherVel);
+            turretShoot.setVelocity(launcherVel);
 
             if (gamepad1.rightBumperWasPressed()){
                 if (lowPower == 1) {
@@ -224,7 +226,14 @@ public class FieldCentric extends LinearOpMode {
             telemetry.addData("Inner Intake vel: ",innerIntakeVel);
             telemetry.addData("Outer Intake vel: ",outerIntakeVel);
             telemetry.addData("turret spinning: ",activeLauncher);
-            // ,telemetry.addData("turret vel: ",launcherVel);
+            telemetry.addData("turret vel: ",launcherVel);
+            telemetry.addData("turret target pos: ",turretTicksToRotate);
+            telemetry.addData("turret target angle: ",angleToTarget);
+
+            telemetry.addData("robot x: ",odometryPos.x);
+            telemetry.addData("robot y: ",odometryPos.y);
+            telemetry.addData("robot h: ",odometryPos.h);
+            telemetry.addData("atan math: ",xDistToTarget/yDistToTarget);
 
             telemetry.update();
         }
