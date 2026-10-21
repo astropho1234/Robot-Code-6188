@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -29,9 +28,11 @@ public class FieldCentric extends LinearOpMode {
     private SparkFunOTOS odometry = null;
 
     private double lowPower;
-    private static final double velConst = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
+    private static final double VELCONST = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
+    private static final double TURRETGEARRATIO = 3.61 * 3.61 * 3.61 * 28;
     private double outerIntakeVel;
     private double innerIntakeVel;
+    private boolean manualTurret;
 
     @Override
     public void runOpMode() {
@@ -87,6 +88,7 @@ public class FieldCentric extends LinearOpMode {
         lowPower = 1;
         outerIntakeVel = 0.0;
         innerIntakeVel = 0.0;
+        manualTurret = false;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -112,38 +114,69 @@ public class FieldCentric extends LinearOpMode {
 
             // Intake
             if (gamepad1.dpadRightWasPressed()) {
-                outerIntakeVel += velConst * 0.1;
+                outerIntakeVel += VELCONST * 0.1;
             } else if (gamepad1.dpadLeftWasPressed()) {
-                outerIntakeVel -= velConst * 0.1;
+                outerIntakeVel -= VELCONST * 0.1;
             }
 
             if (gamepad1.dpadDownWasPressed()) {
-                innerIntakeVel += velConst * 0.1;
+                innerIntakeVel += VELCONST * 0.1;
             } else if (gamepad1.dpadUpWasPressed()) {
-                innerIntakeVel -= velConst * 0.1;
+                innerIntakeVel -= VELCONST * 0.1;
+            }
+
+            if (gamepad1.rightBumperWasPressed()){
+                if (lowPower == 1) {
+                    lowPower = 0.5;
+                } else {
+                    lowPower = 1;
+                }
+            }
+
+            if (gamepad1.startWasPressed()){
+                imu.resetYaw();
             }
 
             // launcher
             int activeLauncher = 0;
             if (gamepad2.x) activeLauncher = 1;
 
+            if (gamepad2.aWasPressed()) manualTurret = !manualTurret;
+
             /*
             Important numbers to aim
-            the center of an upwards hive is 56.86 cm out, 32.375 cm across, and 151.257 cm up
+            the center of an upwards hive is 0.5686 m out, 0.32375 m across, and 1.51257 m up
             from the center of the field
 
-            assume position starts from the left corner (offset by 17 cm forwards 18.85 sideways)
+            assume position starts from the left corner
              */
 
             SparkFunOTOS.Pose2D odometryPos = odometry.getPosition();
-            double xDistToTarget = 1.2614 - odometryPos.x;
+
+            // checking which hive to aim for
+            double xDistToTarget;
+            if (odometryPos.x < 1.83) xDistToTarget = 1.5575 - odometryPos.x;
+            else xDistToTarget = 2.1025 - odometryPos.x;
+
             double yDistToTarget = 1.50625 - odometryPos.y;
 
             // specifically amount to rotate, takes into account robot rotation
             double angleToTarget = Math.atan2(xDistToTarget, yDistToTarget) - Math.toRadians(odometryPos.h); // in radians
-            // multiply gear ratio in with angleToTarget
             // Convert angle from -pi to pi to encoder ticks
-            int turretTicksToRotate = (int) ((angleToTarget * 3.61 * 3.61 * 3.61) * 28 / Math.PI);
+            int turretTicksToRotate = (int) (angleToTarget * TURRETGEARRATIO / Math.PI);
+
+            // checking if it will rotate outside of the range
+            if (turretTicksToRotate > 0.777 * TURRETGEARRATIO) {
+                // setting turret position to the closest point outside the limits
+                // there will be some cursed behavior with setting directly to -pi position if the robot is rotated, fix later
+                if (turretTicksToRotate > 0.166 * TURRETGEARRATIO) turretTicksToRotate = (int) (-1 * TURRETGEARRATIO);
+                else turretTicksToRotate = (int) (0.777 * TURRETGEARRATIO);
+            }
+            else if (turretTicksToRotate < -1 * TURRETGEARRATIO) {
+                // same cursed behavior here too with setting directly instead of math
+                // maybe try Math.clamp()?
+                turretTicksToRotate = (int) (0.777 * TURRETGEARRATIO);
+            }
 
             double launchAngle = Math.toRadians(45);
             // speed is only the speed of the ball, not the launcher vel
@@ -151,6 +184,10 @@ public class FieldCentric extends LinearOpMode {
                     (Math.cos(launchAngle) * Math.cos(launchAngle) * (xDistToTarget * Math.tan(launchAngle) - yDistToTarget))));
             double launcherVel = activeLauncher * launchSpeed * DriveConstants.TICKS_PER_REV / (.045 * 2 * Math.PI); // .045 is radius of wheel
 
+            if (manualTurret) {
+                turretTicksToRotate = turretSpin.getCurrentPosition() + (int) (gamepad2.right_stick_x * 20);
+                launcherVel = gamepad2.left_trigger * 0.25 * VELCONST;
+            }
 
 
             // Get robot heading
@@ -169,10 +206,10 @@ public class FieldCentric extends LinearOpMode {
 
             // Calculate mecanum velocities
             double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-            double frontLeftVel = velConst * (rotY + rotX + rx) / denominator;
-            double rearLeftVel = velConst * (rotY - rotX + rx) / denominator;
-            double frontRightVel = velConst * (rotY - rotX - rx) / denominator;
-            double rearRightVel = velConst * (rotY + rotX - rx) / denominator;
+            double frontLeftVel = VELCONST * (rotY + rotX + rx) / denominator;
+            double rearLeftVel = VELCONST * (rotY - rotX + rx) / denominator;
+            double frontRightVel = VELCONST * (rotY - rotX - rx) / denominator;
+            double rearRightVel = VELCONST * (rotY + rotX - rx) / denominator;
 
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
@@ -186,21 +223,9 @@ public class FieldCentric extends LinearOpMode {
             turretSpin.setTargetPosition(turretTicksToRotate);
             turretSpin.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             // might want pid for this later instead
-            turretSpin.setVelocity(0.25 * velConst);
+            turretSpin.setVelocity(0.25 * VELCONST);
 
             turretShoot.setVelocity(launcherVel);
-
-            if (gamepad1.rightBumperWasPressed()){
-                if (lowPower == 1) {
-                    lowPower = 0.5;
-                } else {
-                    lowPower = 1;
-                }
-            }
-
-            if (gamepad1.startWasPressed()){
-                imu.resetYaw();
-            }
 
             // Telemetry
             telemetry.addData(
@@ -227,13 +252,17 @@ public class FieldCentric extends LinearOpMode {
             telemetry.addData("Outer Intake vel: ",outerIntakeVel);
             telemetry.addData("turret spinning: ",activeLauncher);
             telemetry.addData("turret vel: ",launcherVel);
+            telemetry.addData("ball launch speed: ",launchSpeed);
             telemetry.addData("turret target pos: ",turretTicksToRotate);
             telemetry.addData("turret target angle: ",angleToTarget);
 
             telemetry.addData("robot x: ",odometryPos.x);
             telemetry.addData("robot y: ",odometryPos.y);
+            telemetry.addData("robot x dist: ",xDistToTarget);
+            telemetry.addData("robot y dist: ",yDistToTarget);
             telemetry.addData("robot h: ",odometryPos.h);
             telemetry.addData("atan math: ",xDistToTarget/yDistToTarget);
+            telemetry.addData("manual turret controls: ",manualTurret);
 
             telemetry.update();
         }
