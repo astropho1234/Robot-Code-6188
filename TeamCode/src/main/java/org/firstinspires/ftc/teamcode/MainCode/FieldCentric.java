@@ -60,6 +60,7 @@ public class FieldCentric extends LinearOpMode {
         frontRight.setDirection(DcMotor.Direction.REVERSE);
         rearRight.setDirection(DcMotor.Direction.REVERSE);
         turretSpin.setDirection(DcMotor.Direction.REVERSE);
+        turretShoot.setDirection(DcMotor.Direction.REVERSE);
 
         // motor modes
         // assumes initial position is straight forwards
@@ -112,17 +113,13 @@ public class FieldCentric extends LinearOpMode {
             double x = -gamepad1.left_stick_x * lowPower;
             double rx = -gamepad1.right_stick_x * 3 * lowPower;
 
-            // Intake
-            if (gamepad1.dpadRightWasPressed()) {
-                outerIntakeVel += VELCONST * 0.1;
-            } else if (gamepad1.dpadLeftWasPressed()) {
-                outerIntakeVel -= VELCONST * 0.1;
-            }
-
-            if (gamepad1.dpadDownWasPressed()) {
-                innerIntakeVel += VELCONST * 0.1;
-            } else if (gamepad1.dpadUpWasPressed()) {
-                innerIntakeVel -= VELCONST * 0.1;
+            // intake
+            if (gamepad1.aWasPressed()) {
+                innerIntakeVel = VELCONST;
+                outerIntakeVel = VELCONST * 0.5;
+            } else if (gamepad1.bWasPressed()) {
+                innerIntakeVel = -VELCONST;
+                outerIntakeVel = VELCONST * -0.5;
             }
 
             if (gamepad1.rightBumperWasPressed()){
@@ -133,7 +130,7 @@ public class FieldCentric extends LinearOpMode {
                 }
             }
 
-            if (gamepad1.startWasPressed()){
+            if (gamepad1.leftBumperWasPressed()){
                 imu.resetYaw();
             }
 
