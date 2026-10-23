@@ -115,11 +115,15 @@ public class FieldCentric extends LinearOpMode {
 
             // intake
             if (gamepad1.aWasPressed()) {
-                innerIntakeVel = VELCONST;
                 outerIntakeVel = VELCONST * 0.5;
             } else if (gamepad1.bWasPressed()) {
-                innerIntakeVel = -VELCONST;
                 outerIntakeVel = VELCONST * -0.5;
+            }
+
+            if (gamepad1.xWasPressed()) {
+                innerIntakeVel = VELCONST;
+            } else if (gamepad1.yWasPressed()) {
+                innerIntakeVel = -VELCONST;
             }
 
             if (gamepad1.rightBumperWasPressed()){
