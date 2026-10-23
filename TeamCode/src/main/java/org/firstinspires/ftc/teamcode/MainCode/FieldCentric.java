@@ -33,6 +33,7 @@ public class FieldCentric extends LinearOpMode {
     private double outerIntakeVel;
     private double innerIntakeVel;
     private boolean manualTurret;
+    private int activeLauncher;
 
     @Override
     public void runOpMode() {
@@ -89,7 +90,8 @@ public class FieldCentric extends LinearOpMode {
         lowPower = 1;
         outerIntakeVel = 0.0;
         innerIntakeVel = 0.0;
-        manualTurret = false;
+        manualTurret = true;
+        activeLauncher = 0;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -111,18 +113,19 @@ public class FieldCentric extends LinearOpMode {
             // Joystick controls
             double y = gamepad1.left_stick_y * lowPower;
             double x = -gamepad1.left_stick_x * lowPower;
-            double rx = -gamepad1.right_stick_x * 3 * lowPower;
+            double rx = -gamepad1.right_stick_x * lowPower;
 
             // intake
             if (gamepad1.aWasPressed()) {
-                outerIntakeVel = VELCONST * 0.5;
+                outerIntakeVel = VELCONST * 0.9;
             } else if (gamepad1.bWasPressed()) {
-                outerIntakeVel = VELCONST * -0.5;
+                outerIntakeVel = VELCONST * -0.9;
             }
 
-            if (gamepad1.xWasPressed()) {
+            if (gamepad2.bWasPressed()) {
                 innerIntakeVel = VELCONST;
-            } else if (gamepad1.yWasPressed()) {
+            }
+            if (gamepad2.yWasPressed()) {
                 innerIntakeVel = -VELCONST;
             }
 
@@ -136,13 +139,16 @@ public class FieldCentric extends LinearOpMode {
 
             if (gamepad1.leftBumperWasPressed()){
                 imu.resetYaw();
+                odometry.setPosition(new SparkFunOTOS.Pose2D(1.0266,0.02,0));
             }
 
             // launcher
-            int activeLauncher = 0;
-            if (gamepad2.x) activeLauncher = 1;
+            if (gamepad2.dpadUpWasPressed()) {
+                if (activeLauncher == 1) activeLauncher = 0;
+                else activeLauncher = 1;
+            }
 
-            if (gamepad2.aWasPressed()) manualTurret = !manualTurret;
+            // if (gamepad2.aWasPressed()) manualTurret = !manualTurret;
 
             /*
             Important numbers to aim
@@ -186,8 +192,16 @@ public class FieldCentric extends LinearOpMode {
             double launcherVel = activeLauncher * launchSpeed * DriveConstants.TICKS_PER_REV / (.045 * 2 * Math.PI); // .045 is radius of wheel
 
             if (manualTurret) {
-                turretTicksToRotate = turretSpin.getCurrentPosition() + (int) (gamepad2.right_stick_x * 20);
-                launcherVel = gamepad2.left_trigger * 0.25 * VELCONST;
+                if (gamepad2.dpadRightWasPressed()) {
+                    turretTicksToRotate = turretSpin.getCurrentPosition() + 20;
+                }
+                else if (gamepad2.dpadLeftWasPressed()) {
+                    turretTicksToRotate = turretSpin.getCurrentPosition() - 20;
+                }
+                if (gamepad2.x) {
+                    launcherVel = 0.9 * VELCONST;
+                }
+                else launcherVel = 0;
             }
 
 
@@ -224,7 +238,7 @@ public class FieldCentric extends LinearOpMode {
             turretSpin.setTargetPosition(turretTicksToRotate);
             turretSpin.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             // might want pid for this later instead
-            turretSpin.setVelocity(0.25 * VELCONST);
+            // turretSpin.setVelocity(0.25 * VELCONST);
 
             turretShoot.setVelocity(launcherVel);
 
