@@ -117,9 +117,10 @@ public class FieldCentric extends LinearOpMode {
 
             // intake
             if (gamepad1.aWasPressed()) {
-                outerIntakeVel = VELCONST * 0.9;
+                outerIntakeVel = VELCONST;
             } else if (gamepad1.bWasPressed()) {
-                outerIntakeVel = VELCONST * -0.9;
+                outerIntakeVel = -
+                        VELCONST;
             }
 
             if (gamepad2.bWasPressed()) {
@@ -199,7 +200,7 @@ public class FieldCentric extends LinearOpMode {
                     turretTicksToRotate = turretSpin.getCurrentPosition() - 20;
                 }
                 if (gamepad2.x) {
-                    launcherVel = 0.9 * VELCONST;
+                    launcherVel = 0.75 * VELCONST;
                 }
                 else launcherVel = 0;
             }

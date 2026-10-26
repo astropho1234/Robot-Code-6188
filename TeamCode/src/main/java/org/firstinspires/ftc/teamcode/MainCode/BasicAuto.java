@@ -61,41 +61,23 @@ public class BasicAuto extends LinearOpMode {
         waitForStart();
 
         if (isStopRequested()) return;
-        ElapsedTime timer = new ElapsedTime();
 
-        while (opModeIsActive()) {
-            frontLeft.setTargetPosition(100);
-            frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            frontLeft.setVelocity(VELCONST * 0.25);
+        frontLeft.setTargetPosition(-1500);
+        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        frontLeft.setVelocity(VELCONST * 0.25);
 
-            rearLeft.setTargetPosition(100);
-            rearLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            rearLeft.setVelocity(VELCONST * 0.25);
+        rearLeft.setTargetPosition(1500);
+        rearLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rearLeft.setVelocity(VELCONST * 0.25);
 
-            frontRight.setTargetPosition(100);
-            frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            frontRight.setVelocity(VELCONST * 0.25);
+        frontRight.setTargetPosition(1500);
+        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        frontRight.setVelocity(VELCONST * 0.25);
 
-            rearRight.setTargetPosition(100);
-            rearRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            rearRight.setVelocity(VELCONST * 0.25);
-            if (timer.seconds() > 2) {
-                frontLeft.setTargetPosition(300);
-                frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                frontLeft.setVelocity(VELCONST * 0.25);
+        rearRight.setTargetPosition(-1500);
+        rearRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rearRight.setVelocity(VELCONST * 0.25);
 
-                rearLeft.setTargetPosition(-100);
-                rearLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                rearLeft.setVelocity(VELCONST * 0.25);
-
-                frontRight.setTargetPosition(300);
-                frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                frontRight.setVelocity(VELCONST * 0.25);
-
-                rearRight.setTargetPosition(-100);
-                rearRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                rearRight.setVelocity(VELCONST * 0.25);
-            }
-        }
+        while (opModeIsActive()) ;
     }
 }
