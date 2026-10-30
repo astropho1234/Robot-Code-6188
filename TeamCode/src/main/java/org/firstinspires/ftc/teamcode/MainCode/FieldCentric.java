@@ -7,8 +7,10 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
@@ -29,11 +31,13 @@ public class FieldCentric extends LinearOpMode {
 
     private double lowPower;
     private static final double VELCONST = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
-    private static final double TURRETGEARRATIO = 3.61 * 3.61 * 3.61 * 28;
+    // remove negative when it has a turret
+    private static final double TURRETGEARRATIO = -3.61 * 3.61 * 3.61 * 28;
     private double outerIntakeVel;
     private double innerIntakeVel;
     private boolean manualTurret;
     private int activeLauncher;
+    private int activeIntake; // 0 = off, 1 = in, 2 = out
 
     @Override
     public void runOpMode() {
@@ -79,6 +83,13 @@ public class FieldCentric extends LinearOpMode {
          odometry.setOffset(new SparkFunOTOS.Pose2D(0,0,0));
          odometry.setLinearScalar(1.463);
          odometry.setAngularScalar(1.0);
+         odometry.resetTracking();
+
+
+
+
+
+
 
         // Change these if your Control Hub is mounted differently
         RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
@@ -92,6 +103,7 @@ public class FieldCentric extends LinearOpMode {
         innerIntakeVel = 0.0;
         manualTurret = true;
         activeLauncher = 0;
+        activeIntake = 0;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -117,17 +129,34 @@ public class FieldCentric extends LinearOpMode {
 
             // intake
             if (gamepad1.aWasPressed()) {
-                outerIntakeVel = VELCONST;
+                if (activeIntake == 1) {
+                    outerIntakeVel = 0;
+                    innerIntakeVel = 0;
+                    activeIntake = 0;
+                }
+                else {
+                    outerIntakeVel = VELCONST;
+                    innerIntakeVel = -VELCONST;
+                    activeIntake = 1;
+                }
+
             } else if (gamepad1.bWasPressed()) {
-                outerIntakeVel = -
-                        VELCONST;
+                if (activeIntake == 2) {
+                    outerIntakeVel = 0;
+                    innerIntakeVel = 0;
+                    activeIntake = 0;
+                }
+                else {
+                    outerIntakeVel = -VELCONST;
+                    innerIntakeVel = -VELCONST;
+                    activeIntake = 2;
+                }
+
             }
 
-            if (gamepad2.bWasPressed()) {
+            if (gamepad2.b) {
+                outerIntakeVel = VELCONST;
                 innerIntakeVel = VELCONST;
-            }
-            if (gamepad2.yWasPressed()) {
-                innerIntakeVel = -VELCONST;
             }
 
             if (gamepad1.rightBumperWasPressed()){
@@ -149,7 +178,7 @@ public class FieldCentric extends LinearOpMode {
                 else activeLauncher = 1;
             }
 
-            // if (gamepad2.aWasPressed()) manualTurret = !manualTurret;
+            if (gamepad2.aWasPressed()) manualTurret = !manualTurret;
 
             /*
             Important numbers to aim
@@ -169,11 +198,12 @@ public class FieldCentric extends LinearOpMode {
             double yDistToTarget = 1.50625 - odometryPos.y;
 
             // specifically amount to rotate, takes into account robot rotation
-            double angleToTarget = Math.atan2(xDistToTarget, yDistToTarget) - Math.toRadians(odometryPos.h); // in radians
+            double angleToTarget = Math.atan2(xDistToTarget, yDistToTarget) - Math.toRadians(odometryPos.h) / 2; // in radians
             // Convert angle from -pi to pi to encoder ticks
             int turretTicksToRotate = (int) (angleToTarget * TURRETGEARRATIO / Math.PI);
 
             // checking if it will rotate outside of the range
+            /*
             if (turretTicksToRotate > 0.777 * TURRETGEARRATIO) {
                 // setting turret position to the closest point outside the limits
                 // there will be some cursed behavior with setting directly to -pi position if the robot is rotated, fix later
@@ -185,6 +215,7 @@ public class FieldCentric extends LinearOpMode {
                 // maybe try Math.clamp()?
                 turretTicksToRotate = (int) (0.777 * TURRETGEARRATIO);
             }
+             */
 
             double launchAngle = Math.toRadians(45);
             // speed is only the speed of the ball, not the launcher vel
@@ -239,7 +270,7 @@ public class FieldCentric extends LinearOpMode {
             turretSpin.setTargetPosition(turretTicksToRotate);
             turretSpin.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             // might want pid for this later instead
-            // turretSpin.setVelocity(0.25 * VELCONST);
+            turretSpin.setVelocity(0.25 * VELCONST);
 
             turretShoot.setVelocity(launcherVel);
 
@@ -279,6 +310,18 @@ public class FieldCentric extends LinearOpMode {
             telemetry.addData("robot h: ",odometryPos.h);
             telemetry.addData("atan math: ",xDistToTarget/yDistToTarget);
             telemetry.addData("manual turret controls: ",manualTurret);
+            telemetry.addData("low power mode: ",lowPower);
+
+            telemetry.addData("frontLeft power draw: ", frontLeft.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("rearLeft power draw: ", rearLeft.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("frontRight power draw: ", frontRight.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("rearRight power draw: ", rearRight.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("outerIntake power draw: ", outerIntake.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("innerIntake power draw: ", innerIntake.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("turretSpin power draw: ", turretSpin.getCurrent(CurrentUnit.AMPS));
+            telemetry.addData("turretShoot power draw: ", turretShoot.getCurrent(CurrentUnit.AMPS));
+
+
 
             telemetry.update();
         }
