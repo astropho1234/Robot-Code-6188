@@ -32,7 +32,7 @@ public class FieldCentric extends LinearOpMode {
     private double lowPower;
     private static final double VELCONST = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
     // remove negative when it has a turret
-    private static final double TURRETGEARRATIO = -3.61 * 3.61 * 3.61 * 28;
+    private static final double TURRETGEARRATIO = 3.61 * 3.61 * 3.61 * 28 * 1.5111;
     private double outerIntakeVel;
     private double innerIntakeVel;
     private boolean manualTurret;
@@ -127,6 +127,9 @@ public class FieldCentric extends LinearOpMode {
             double x = -gamepad1.left_stick_x * lowPower;
             double rx = -gamepad1.right_stick_x * lowPower;
 
+            // Get robot heading
+            double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
             // intake
             if (gamepad1.aWasPressed()) {
                 if (activeIntake == 1) {
@@ -161,7 +164,7 @@ public class FieldCentric extends LinearOpMode {
 
             if (gamepad1.rightBumperWasPressed()){
                 if (lowPower == 1) {
-                    lowPower = 0.5;
+                    lowPower = 0.25;
                 } else {
                     lowPower = 1;
                 }
@@ -169,7 +172,7 @@ public class FieldCentric extends LinearOpMode {
 
             if (gamepad1.leftBumperWasPressed()){
                 imu.resetYaw();
-                odometry.setPosition(new SparkFunOTOS.Pose2D(1.0266,0.02,0));
+                odometry.setPosition(new SparkFunOTOS.Pose2D(1.0266,0.02,180));
             }
 
             // launcher
@@ -198,7 +201,7 @@ public class FieldCentric extends LinearOpMode {
             double yDistToTarget = 1.50625 - odometryPos.y;
 
             // specifically amount to rotate, takes into account robot rotation
-            double angleToTarget = Math.atan2(xDistToTarget, yDistToTarget) - Math.toRadians(odometryPos.h) / 2; // in radians
+            double angleToTarget = (Math.atan2(xDistToTarget, yDistToTarget) + botHeading); // in radians
             // Convert angle from -pi to pi to encoder ticks
             int turretTicksToRotate = (int) (angleToTarget * TURRETGEARRATIO / Math.PI);
 
@@ -235,11 +238,6 @@ public class FieldCentric extends LinearOpMode {
                 }
                 else launcherVel = 0;
             }
-
-
-            // Get robot heading
-            double botHeading = imu.getRobotYawPitchRollAngles()
-                    .getYaw(AngleUnit.RADIANS);
 
             // Convert robot-centric controls to field-centric
             double rotX = x * Math.cos(-botHeading)
@@ -295,20 +293,20 @@ public class FieldCentric extends LinearOpMode {
                     rearRightVel
             );
 
-            telemetry.addData("Inner Intake vel: ",innerIntakeVel);
-            telemetry.addData("Outer Intake vel: ",outerIntakeVel);
+            // telemetry.addData("Inner Intake vel: ",innerIntakeVel);
+            // telemetry.addData("Outer Intake vel: ",outerIntakeVel);
             telemetry.addData("turret spinning: ",activeLauncher);
             telemetry.addData("turret vel: ",launcherVel);
             telemetry.addData("ball launch speed: ",launchSpeed);
             telemetry.addData("turret target pos: ",turretTicksToRotate);
-            telemetry.addData("turret target angle: ",angleToTarget);
+            telemetry.addData("turret target angle: ",Math.toDegrees(angleToTarget));
 
             telemetry.addData("robot x: ",odometryPos.x);
             telemetry.addData("robot y: ",odometryPos.y);
             telemetry.addData("robot x dist: ",xDistToTarget);
             telemetry.addData("robot y dist: ",yDistToTarget);
             telemetry.addData("robot h: ",odometryPos.h);
-            telemetry.addData("atan math: ",xDistToTarget/yDistToTarget);
+            telemetry.addData("atan math: ",Math.atan2(xDistToTarget, yDistToTarget));
             telemetry.addData("manual turret controls: ",manualTurret);
             telemetry.addData("low power mode: ",lowPower);
 
