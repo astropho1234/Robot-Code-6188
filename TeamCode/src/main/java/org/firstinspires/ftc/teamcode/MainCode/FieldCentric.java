@@ -41,7 +41,8 @@ public class FieldCentric extends LinearOpMode {
     private double prevBotHeading;
 
     private static final double[][][] launcherVelPoints = { // formated as {x,y,vel} in a 2d array
-            {{0,0,0}}
+            {{0,0,0}, {0,1,0}},
+            {{0,1,0}, {1,1,0}}
     };
 
     @Override
