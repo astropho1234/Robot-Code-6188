@@ -29,15 +29,20 @@ public class FieldCentric extends LinearOpMode {
     private DcMotorEx turretShoot = null;
     private SparkFunOTOS odometry = null;
 
-    private double lowPower;
     private static final double VELCONST = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
     // remove negative when it has a turret
     private static final double TURRETGEARRATIO = 3.61 * 3.61 * 3.61 * 28 * 1.5111;
+    private double lowPower;
     private double outerIntakeVel;
     private double innerIntakeVel;
     private boolean manualTurret;
-    private int activeLauncher;
+    private boolean activeLauncher;
     private int activeIntake; // 0 = off, 1 = in, 2 = out
+    private double prevBotHeading;
+
+    private static final double[][][] launcherVelPoints = { // formated as {x,y,vel} in a 2d array
+            {{0,0,0}}
+    };
 
     @Override
     public void runOpMode() {
@@ -102,8 +107,9 @@ public class FieldCentric extends LinearOpMode {
         outerIntakeVel = 0.0;
         innerIntakeVel = 0.0;
         manualTurret = true;
-        activeLauncher = 0;
+        activeLauncher = false;
         activeIntake = 0;
+        prevBotHeading = 0.0;
 
         imu.initialize(new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -129,6 +135,10 @@ public class FieldCentric extends LinearOpMode {
 
             // Get robot heading
             double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+            // saving new target imu pos if rotated
+            boolean hasRotated;
+            if (Math.abs(rx) > 0.05) prevBotHeading = botHeading;
 
             // intake
             if (gamepad1.aWasPressed()) {
@@ -177,8 +187,7 @@ public class FieldCentric extends LinearOpMode {
 
             // launcher
             if (gamepad2.dpadUpWasPressed()) {
-                if (activeLauncher == 1) activeLauncher = 0;
-                else activeLauncher = 1;
+                activeLauncher  = !activeLauncher;
             }
 
             if (gamepad2.aWasPressed()) manualTurret = !manualTurret;
@@ -220,11 +229,37 @@ public class FieldCentric extends LinearOpMode {
             }
              */
 
+            // prev guess of launcherVel, will not work
+            /*
             double launchAngle = Math.toRadians(45);
             // speed is only the speed of the ball, not the launcher vel
             double launchSpeed = Math.sqrt(Math.abs((4.7 * xDistToTarget * xDistToTarget) /
                     (Math.cos(launchAngle) * Math.cos(launchAngle) * (xDistToTarget * Math.tan(launchAngle) - yDistToTarget))));
             double launcherVel = activeLauncher * launchSpeed * DriveConstants.TICKS_PER_REV / (.045 * 2 * Math.PI); // .045 is radius of wheel
+             */
+
+            // interpolating to get launch vel
+            double launcherVel = 0;
+
+            if (activeLauncher && !manualTurret) {
+                // getting square to interpolate from
+                int i = 1;
+                while (launcherVelPoints[0][i][0] < odometryPos.x) i++;
+
+                int j = 1;
+                while (launcherVelPoints[j][i][1] < odometryPos.y) j++;
+
+                // linear interpolation math
+                double InterpXTop = ((launcherVelPoints[j][i][0] - odometryPos.x) / (launcherVelPoints[j][i][0] - launcherVelPoints[j][i-1][0])) * launcherVelPoints[j][i][2]
+                        + (( odometryPos.x -launcherVelPoints[j][i-1][0]) / (launcherVelPoints[j][i][0] - launcherVelPoints[j][i-1][0])) * launcherVelPoints[j][i-1][2];
+                double InterpXBot = ((launcherVelPoints[j-1][i][0] - odometryPos.x) / (launcherVelPoints[j-1][i][0] - launcherVelPoints[j-1][i-1][0])) * launcherVelPoints[j-1][i][2]
+                        + (( odometryPos.x -launcherVelPoints[j-1][i-1][0]) / (launcherVelPoints[j-1][i][0] - launcherVelPoints[j-1][i-1][0])) * launcherVelPoints[j-1][i-1][2];
+                double InterpFinal = ((launcherVelPoints[j][i][1] - odometryPos.y) / (launcherVelPoints[j][i][1] - launcherVelPoints[j-1][i][1])) * InterpXTop
+                        + (( odometryPos.y -launcherVelPoints[j-1][i][1]) / (launcherVelPoints[j][i][1] - launcherVelPoints[j-1][i][1])) * InterpXBot;
+
+                launcherVel = InterpFinal;
+            }
+
 
             if (manualTurret) {
                 if (gamepad2.dpadRightWasPressed()) {
@@ -249,12 +284,27 @@ public class FieldCentric extends LinearOpMode {
             // Compensate for imperfect strafing
             rotX *= 1.1;
 
+            // adjust for unintentional rotation
+
             // Calculate mecanum velocities
             double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
             double frontLeftVel = VELCONST * (rotY + rotX + rx) / denominator;
             double rearLeftVel = VELCONST * (rotY - rotX + rx) / denominator;
             double frontRightVel = VELCONST * (rotY - rotX - rx) / denominator;
             double rearRightVel = VELCONST * (rotY + rotX - rx) / denominator;
+
+            // correcting for misaligned imu movements
+            frontLeftVel += Math.toDegrees(prevBotHeading - botHeading) * VELCONST / 10;
+            frontRightVel -= Math.toDegrees(prevBotHeading - botHeading) * VELCONST / 10;
+            // accounting for a velocity greater than the max by reducing the opposite wheel instead
+            if (frontLeftVel > VELCONST) {
+                rearRightVel -= frontLeftVel - VELCONST;
+                frontLeftVel = VELCONST;
+            }
+            if (frontRightVel < -VELCONST) {
+                rearLeftVel += frontRightVel + VELCONST;
+                frontRightVel = -VELCONST;
+            }
 
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
@@ -297,7 +347,7 @@ public class FieldCentric extends LinearOpMode {
             // telemetry.addData("Outer Intake vel: ",outerIntakeVel);
             telemetry.addData("turret spinning: ",activeLauncher);
             telemetry.addData("turret vel: ",launcherVel);
-            telemetry.addData("ball launch speed: ",launchSpeed);
+            // telemetry.addData("ball launch speed: ",launchSpeed);
             telemetry.addData("turret target pos: ",turretTicksToRotate);
             telemetry.addData("turret target angle: ",Math.toDegrees(angleToTarget));
 
