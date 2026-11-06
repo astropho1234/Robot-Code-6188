@@ -7,7 +7,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -31,7 +30,7 @@ public class FieldCentric extends LinearOpMode {
 
     private static final double VELCONST = DriveConstants.MAX_RPM / 60.0 * DriveConstants.TICKS_PER_REV;
     // remove negative when it has a turret
-    private static final double TURRETGEARRATIO = 3.61 * 3.61 * 3.61 * 28 * 1.5111;
+    private static final double TURRETGEARRATIO = -3.61 * 3.61 * 3.61 * 28 * 7.6667 / 3;
     private double lowPower;
     private double outerIntakeVel;
     private double innerIntakeVel;
@@ -62,9 +61,6 @@ public class FieldCentric extends LinearOpMode {
         turretSpin = hardwareMap.get(DcMotorEx.class, "turretspin");
         turretShoot = hardwareMap.get(DcMotorEx.class, "turretshoot");
 
-        // Odometry
-        odometry = hardwareMap.get(SparkFunOTOS.class, "odometry");
-
         // Motor directions
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
         rearLeft.setDirection(DcMotor.Direction.FORWARD);
@@ -72,6 +68,7 @@ public class FieldCentric extends LinearOpMode {
         rearRight.setDirection(DcMotor.Direction.REVERSE);
         turretSpin.setDirection(DcMotor.Direction.REVERSE);
         turretShoot.setDirection(DcMotor.Direction.REVERSE);
+        innerIntake.setDirection(DcMotor.Direction.REVERSE);
 
         // motor modes
         // assumes initial position is straight forwards
@@ -83,13 +80,14 @@ public class FieldCentric extends LinearOpMode {
         // Initialize IMU and odometry
         IMU imu = hardwareMap.get(IMU.class, "imu");
 
-         odometry.setLinearUnit(DistanceUnit.METER);
-         odometry.setAngularUnit(AngleUnit.DEGREES);
-         // all of these below are temp values that need to be changed
-         odometry.setOffset(new SparkFunOTOS.Pose2D(0,0,0));
-         odometry.setLinearScalar(1.463);
-         odometry.setAngularScalar(1.0);
-         odometry.resetTracking();
+        odometry = hardwareMap.get(SparkFunOTOS.class, "odometry");
+        odometry.setLinearUnit(DistanceUnit.METER);
+        odometry.setAngularUnit(AngleUnit.DEGREES);
+        // all of these below are temp values that need to be changed
+        odometry.setOffset(new SparkFunOTOS.Pose2D(0.1885,0.035,180));
+        odometry.setLinearScalar(1.463);
+        odometry.setAngularScalar(1.0);
+        odometry.resetTracking();
 
 
 
@@ -145,32 +143,30 @@ public class FieldCentric extends LinearOpMode {
             if (gamepad1.aWasPressed()) {
                 if (activeIntake == 1) {
                     outerIntakeVel = 0;
-                    innerIntakeVel = 0;
                     activeIntake = 0;
                 }
                 else {
-                    outerIntakeVel = VELCONST;
-                    innerIntakeVel = -VELCONST;
+                    outerIntakeVel = VELCONST * 0.5;
                     activeIntake = 1;
                 }
 
             } else if (gamepad1.bWasPressed()) {
                 if (activeIntake == 2) {
                     outerIntakeVel = 0;
-                    innerIntakeVel = 0;
                     activeIntake = 0;
                 }
                 else {
-                    outerIntakeVel = -VELCONST;
-                    innerIntakeVel = -VELCONST;
+                    outerIntakeVel = -VELCONST * 0.5;
                     activeIntake = 2;
                 }
 
             }
 
             if (gamepad2.b) {
-                outerIntakeVel = VELCONST;
-                innerIntakeVel = VELCONST;
+                innerIntakeVel = VELCONST * 0.2;
+            }
+            else if (gamepad2.a) {
+                innerIntakeVel = -VELCONST * 0.2;
             }
 
             if (gamepad1.rightBumperWasPressed()){
@@ -295,8 +291,9 @@ public class FieldCentric extends LinearOpMode {
             double rearRightVel = VELCONST * (rotY + rotX - rx) / denominator;
 
             // correcting for misaligned imu movements
-            frontLeftVel += Math.toDegrees(prevBotHeading - botHeading) * VELCONST / 10;
-            frontRightVel -= Math.toDegrees(prevBotHeading - botHeading) * VELCONST / 10;
+            /*
+            frontLeftVel += Math.toDegrees(prevBotHeading - botHeading) * VELCONST / 50;
+            frontRightVel -= Math.toDegrees(prevBotHeading - botHeading) * VELCONST / 50;
             // accounting for a velocity greater than the max by reducing the opposite wheel instead
             if (frontLeftVel > VELCONST) {
                 rearRightVel -= frontLeftVel - VELCONST;
@@ -306,6 +303,8 @@ public class FieldCentric extends LinearOpMode {
                 rearLeftVel += frontRightVel + VELCONST;
                 frontRightVel = -VELCONST;
             }
+
+             */
 
             // Send velocity to motors
             frontLeft.setVelocity(frontLeftVel);
